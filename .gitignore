@@ -1,0 +1,6 @@
+.idea
+.terraform
+
+deploy_ec2.sh
+
+.terraform.lock.hcl
