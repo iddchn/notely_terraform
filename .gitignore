@@ -4,3 +4,4 @@
 deploy_ec2.sh
 
 .terraform.lock.hcl
+.DS_Store

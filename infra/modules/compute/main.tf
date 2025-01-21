@@ -156,6 +156,11 @@ resource "aws_instance" "idan_jenkins_instance" {
     }
 }
 
+resource "aws_eip_association" "idan_eip" {
+    allocation_id = var.eip_allocation_id
+    instance_id = aws_instance.idan_jenkins_instance[0].id
+}
+
 # resource "aws_autoscaling_group" "idan_ec2_instances" {
 #     name = "idan_idan_ec2_instances"
 #     launch_template {

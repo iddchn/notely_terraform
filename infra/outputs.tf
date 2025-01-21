@@ -30,10 +30,4 @@ output "instance_name" {
     value = module.compute.instance_name
 }
 
-# output "subnet_map" {
-#     value = module.network.subnet_map
-# }
 
-# output "var_subnets" {
-#     value = module.network.var_subnets
-# }

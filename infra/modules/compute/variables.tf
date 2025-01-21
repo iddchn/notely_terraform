@@ -56,3 +56,8 @@ variable "number_of_instances" {
     type = number
     default = 1
 }
+
+variable "eip_allocation_id" {
+    type = string
+    default = null
+}

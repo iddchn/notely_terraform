@@ -35,7 +35,7 @@ idan_sg_list = {
                 from_port   = 0
                 to_port     = 0
                 protocol    = "-1"
-                cidr_blocks = ["79.183.236.190/32"]
+                cidr_blocks = ["79.178.6.65/32"]
                 description = "Allow all traffic from my ip"
             },
             {
@@ -57,3 +57,5 @@ idan_sg_list = {
         ]
     }
 }
+
+eip_allocation_id = "eipalloc-0969d30a9208009bb"

@@ -16,4 +16,6 @@ module "compute" {
     idan_sg_list = var.idan_sg_list
     ec2_instance_template = var.ec2_instance_template
     idan_ec2_subnets = module.network.idan_ec2_subnets_id
+    number_of_instances = var.number_of_instances
+    eip_allocation_id = var.eip_allocation_id
 }
