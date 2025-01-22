@@ -22,3 +22,18 @@ variable "eks_instance_type" {
     type = list(string)
     default = null
 }
+
+variable "eks_ebs_csi_name" {
+    type = string
+    default = null
+}
+
+variable "eks_ebs_csi_iam_policy_name" {
+    type = string
+    default = null
+}
+
+variable "eks_ebs_iam_role_name" {
+    type = string
+    default = null
+}

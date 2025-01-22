@@ -94,9 +94,9 @@ resource "aws_eks_node_group" "idan_eks_node_group" {
   version = aws_eks_cluster.idan_eks_cluster.version
 
   scaling_config {
-    desired_size = 2
-    max_size     = 2
-    min_size     = 1
+    desired_size = 3
+    max_size     = 3
+    min_size     = 3
   }
 
   instance_types = var.eks_instance_type
@@ -111,3 +111,73 @@ resource "aws_eks_node_group" "idan_eks_node_group" {
     Name = var.eks_node_group_name
   }
 }
+
+resource "aws_eks_addon" "idan_ebs_csi" {
+  cluster_name = aws_eks_cluster.idan_eks_cluster.name
+  addon_name   = var.eks_ebs_csi_name
+
+  depends_on = [
+    aws_eks_node_group.idan_eks_node_group
+  ]
+
+  tags = {
+    Name = var.eks_ebs_csi_name
+  }
+}
+
+resource "aws_iam_policy" "idan_ebs_csi_policy" {
+  name        = var.eks_ebs_csi_iam_policy_name
+  description = "Policy for EBS CSI driver to manage EBS volumes."
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "ec2:CreateSnapshot",
+          "ec2:AttachVolume",
+          "ec2:DetachVolume",
+          "ec2:ModifyVolume",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInstances",
+          "ec2:DescribeSnapshots",
+          "ec2:DescribeTags",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeVolumesModifications",
+          "ec2:DeleteSnapshot",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "idan_ebs_csi_role" {
+  name = var.eks_ebs_iam_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Principal = {
+          Service = "eks.amazonaws.com"
+        },
+        Action    = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name = "eks-ebs-csi-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_policy_attachment" {
+  role       = aws_iam_role.idan_ebs_csi_role.name
+  policy_arn = aws_iam_policy.idan_ebs_csi_policy.arn
+}
+
