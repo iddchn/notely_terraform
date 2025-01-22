@@ -24,3 +24,9 @@ eks_node_group_name = "idan-eks-node-group"
 eks_cluster_role_policy_name = "idan-eks-role-policy"
 
 eks_instance_type = ["t3a.medium"]
+
+eks_ebs_csi_name = "idan-eks-ebs-csi"
+
+eks_ebs_csi_iam_policy_name = "idan-eks-ebs-csi-iam-policy"
+
+eks_ebs_iam_role_name = "idan-eks-ebs-iam-role"
