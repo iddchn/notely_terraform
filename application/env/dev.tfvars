@@ -30,3 +30,5 @@ eks_ebs_csi_name = "idan-eks-ebs-csi"
 eks_ebs_csi_iam_policy_name = "idan-eks-ebs-csi-iam-policy"
 
 eks_ebs_iam_role_name = "idan-eks-ebs-iam-role"
+
+eks_version = "1.31"

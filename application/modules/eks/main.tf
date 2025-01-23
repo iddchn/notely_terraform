@@ -33,6 +33,7 @@ resource "aws_iam_role_policy_attachment" "idan_eks_vpc_resource_policy_controll
 resource "aws_eks_cluster" "idan_eks_cluster" {
   name     = var.eks_cluster_name
   role_arn = aws_iam_role.idan_eks_cluster_role.arn
+  version  = var.eks_version
 
   vpc_config {
     subnet_ids = var.subnet_ids[*]
@@ -112,10 +113,13 @@ resource "aws_eks_node_group" "idan_eks_node_group" {
   }
 }
 
+data "aws_eks_cluster_auth" "idan_eks_cluster" {
+  name = aws_eks_cluster.idan_eks_cluster.name
+}
+
 resource "aws_eks_addon" "idan_ebs_csi" {
   cluster_name = aws_eks_cluster.idan_eks_cluster.name
-  addon_name   = var.eks_ebs_csi_name
-
+  addon_name   = "aws-ebs-csi-driver"
   depends_on = [
     aws_eks_node_group.idan_eks_node_group
   ]

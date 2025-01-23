@@ -37,3 +37,8 @@ variable "eks_ebs_iam_role_name" {
     type = string
     default = null
 }
+
+variable "eks_version" {
+    type = string
+    default = null
+}
