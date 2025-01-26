@@ -45,7 +45,7 @@ resource "aws_eks_cluster" "idan_eks_cluster" {
 
   depends_on = [
     aws_iam_role_policy_attachment.idan_eks_cluster_policy_attachment,
-    aws_iam_role_policy_attachment.idan_eks_vpc_resource_policy_controller
+    aws_iam_role_policy_attachment.idan_eks_vpc_resource_policy_controller,
   ]
 }
 
@@ -86,6 +86,11 @@ resource "aws_iam_role_policy_attachment" "idan_ec2_container_registry_policy" {
   role       = aws_iam_role.idan_eks_node_role.name
 }
 
+resource "aws_iam_role_policy_attachment" "idan_ebs_csi_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.idan_eks_node_role.name
+}
+
 resource "aws_eks_node_group" "idan_eks_node_group" {
   cluster_name    = aws_eks_cluster.idan_eks_cluster.name
   node_group_name = var.eks_node_group_name
@@ -105,7 +110,7 @@ resource "aws_eks_node_group" "idan_eks_node_group" {
   depends_on = [
     aws_iam_role_policy_attachment.idan_node_group_policy,
     aws_iam_role_policy_attachment.idan_cni_policy,
-    aws_iam_role_policy_attachment.idan_ec2_container_registry_policy
+    aws_iam_role_policy_attachment.idan_ec2_container_registry_policy,
   ]
 
   tags = {
@@ -124,64 +129,153 @@ resource "aws_eks_addon" "idan_ebs_csi" {
     aws_eks_node_group.idan_eks_node_group
   ]
 
+  service_account_role_arn = aws_iam_role.idan_ebs_csi_role.arn
+
   tags = {
     Name = var.eks_ebs_csi_name
   }
 }
 
-resource "aws_iam_policy" "idan_ebs_csi_policy" {
-  name        = var.eks_ebs_csi_iam_policy_name
-  description = "Policy for EBS CSI driver to manage EBS volumes."
+resource "aws_eks_addon" "idan_vpc_cni" {
+  cluster_name = aws_eks_cluster.idan_eks_cluster.name
+  addon_name   = "vpc-cni"
+  depends_on = [
+    aws_eks_node_group.idan_eks_node_group
+  ]
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = [
-          "ec2:CreateSnapshot",
-          "ec2:AttachVolume",
-          "ec2:DetachVolume",
-          "ec2:ModifyVolume",
-          "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeInstances",
-          "ec2:DescribeSnapshots",
-          "ec2:DescribeTags",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeVolumesModifications",
-          "ec2:DeleteSnapshot",
-          "ec2:CreateTags",
-          "ec2:DeleteTags"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+
+  tags = {
+    Name = var.eks_vpc_cni_name
+  }
+}
+
+resource "aws_iam_role" "vpc_cni_role" {
+  name               = "AmazonEKSVPCCNIRole"
+  assume_role_policy = data.aws_iam_policy_document.vpc_cni_assume_policy.json
+}
+
+data "aws_iam_policy_document" "vpc_cni_assume_policy" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["eks.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_policy_attachment" "vpc_cni_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  roles      = [aws_iam_role.vpc_cni_role.name]
+  name       = "AmazonEKSVPCCNIRole"
+}
+
+
+data "tls_certificate" "oidc" {
+  url = aws_eks_cluster.idan_eks_cluster.identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_role" "idan_ebs_csi_role" {
-  name = var.eks_ebs_iam_role_name
+  name = "idan-ebs-csi-driver-role"
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_driver_assume_role.json
+}
 
+data "aws_iam_policy_document" "ebs_csi_driver_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.idan_oidc_provider.arn]
+    }
+
+    actions = [
+      "sts:AssumeRoleWithWebIdentity",
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "${aws_iam_openid_connect_provider.idan_oidc_provider.url}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${aws_iam_openid_connect_provider.idan_oidc_provider.url}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+  }
+}
+
+resource "aws_iam_policy_attachment" "idan_ebs_csi_policy_attachment" {
+  name = "idan-ebs-csi-driver-policy-attachment"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  roles      = [aws_iam_role.idan_ebs_csi_role.name]
+}
+
+resource "aws_iam_openid_connect_provider" "idan_oidc_provider" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.oidc.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.idan_eks_cluster.identity.0.oidc.0.issuer
+}
+
+resource "kubernetes_service_account" "ebs_csi_sa" {
+  metadata {
+    name      = "ebs-csi-controller"
+    namespace = "kube-system"
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.idan_ebs_csi_role.arn
+    }
+  }
+}
+
+resource "aws_iam_policy" "idan_secrets_manager_policy" {
+  name        = "SecretsManagerAccessPolicy"
+  description = "Policy to allow access to Secrets Manager secret dynamically"
+  policy = data.aws_iam_policy_document.idan_secrets_manager_policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "idan_secretsmanager_attachment" {
+  policy_arn = aws_iam_policy.idan_secrets_manager_policy.arn
+  role       = aws_iam_role.idan_eks_secret_manager_role.name
+}
+
+# Secrets Manager Role
+
+data "aws_iam_policy_document" "idan_secrets_manager_policy_doc" {
+  statement {
+    sid    = "AllowGetSecretValue"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = [
+      var.mongodb_secret
+    ]
+  }
+}
+
+resource "aws_iam_role" "idan_eks_secret_manager_role" {
+  name = "idan-eks-secret-manager-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        Effect    = "Allow",
+        Effect = "Allow",
         Principal = {
-          Service = "eks.amazonaws.com"
+          Federated = aws_iam_openid_connect_provider.idan_oidc_provider.arn
         },
-        Action    = "sts:AssumeRole"
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            "${aws_iam_openid_connect_provider.idan_oidc_provider.url}:sub" : "system:serviceaccount:${var.app_namespace}:${var.secret_manager_serviceaccount_name}"
+          }
+        }
       }
     ]
   })
-
-  tags = {
-    Name = "eks-ebs-csi-role"
-  }
 }
-
-resource "aws_iam_role_policy_attachment" "ebs_csi_policy_attachment" {
-  role       = aws_iam_role.idan_ebs_csi_role.name
-  policy_arn = aws_iam_policy.idan_ebs_csi_policy.arn
-}
-

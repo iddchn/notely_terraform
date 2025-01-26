@@ -32,3 +32,15 @@ eks_ebs_csi_iam_policy_name = "idan-eks-ebs-csi-iam-policy"
 eks_ebs_iam_role_name = "idan-eks-ebs-iam-role"
 
 eks_version = "1.31"
+
+mongodb_user = "admin"
+
+mongodb_password = "123456"
+
+mongodb_host = "app-notely-mongodb-headless.notely.svc.cluster.local:27017"
+
+app_namespace = "notely"
+
+secret_manager_serviceaccount_name = "notely-secret-manager"
+
+eks_vpc_cni_name = "idan-eks-vpc-cni"

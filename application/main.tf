@@ -11,6 +11,7 @@ module "network" {
 
 module "eks" {
     source = "./modules/eks"
+    depends_on = [module.network, module.secrets]
     subnet_ids = module.network.idan_ec2_subnets_id
     eks_cluster_name = var.eks_cluster_name
     eks_node_group_name = var.eks_node_group_name
@@ -20,11 +21,19 @@ module "eks" {
     eks_ebs_csi_iam_policy_name = var.eks_ebs_csi_iam_policy_name
     eks_ebs_iam_role_name = var.eks_ebs_iam_role_name
     eks_version = var.eks_version
+    mongodb_secret = module.secrets.mongodb_secret_arn
+    app_namespace = var.app_namespace
+    secret_manager_serviceaccount_name = var.secret_manager_serviceaccount_name
+}
+
+module "secrets" {
+    source = "./modules/secrets"
+    mongodb_user = var.mongodb_user
+    mongodb_password = var.mongodb_password
+    mongodb_host = var.mongodb_host
 }
 
 module "helm" {
     source = "./modules/helm"
-    eks_cluster_endpoint = module.eks.eks_cluster_endpoint
-    cluster_ca_certificate = module.eks.cluster_ca_certificate
-    eks_token = module.eks.eks_token
+    depends_on = [module.eks]
 }

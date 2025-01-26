@@ -1,0 +1,4 @@
+elasticsearchHosts: "https://elasticsearch-master:9200"  # Elasticsearch service name
+replicas: 1
+service:
+  type: LoadBalancer  # Expose Kibana via LoadBalancer

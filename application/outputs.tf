@@ -22,3 +22,11 @@ output "node_group_id" {
 output "idan_eks_rt" {
     value = module.network.idan_eks_rt
 }
+
+output "eks_cluster_role_arn" {
+  value = module.eks.eks_cluster_role_arn
+}
+
+output "idan_eks_secret_manager_role" {
+  value = module.eks.idan_eks_secret_manager_role
+}

@@ -42,3 +42,23 @@ variable "eks_version" {
     type = string
     default = null
 }
+
+variable "mongodb_secret" {
+    type = string
+    default = null
+}
+
+variable "app_namespace" {
+    type = string
+    default = null
+}
+
+variable "secret_manager_serviceaccount_name" {
+    type = string
+    default = null
+}
+
+variable "eks_vpc_cni_name" {
+    type = string
+    default = null
+}

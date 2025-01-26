@@ -17,3 +17,15 @@ output "cluster_ca_certificate" {
 output "eks_token" {
   value = data.aws_eks_cluster_auth.idan_eks_cluster.token
 }
+
+output "eks_cluster_name" {
+  value = aws_eks_cluster.idan_eks_cluster.name
+}
+
+output "eks_cluster_role_arn" {
+  value = aws_iam_role.idan_eks_cluster_role.arn
+}
+
+output "idan_eks_secret_manager_role" {
+  value = aws_iam_role.idan_eks_secret_manager_role.arn
+}
